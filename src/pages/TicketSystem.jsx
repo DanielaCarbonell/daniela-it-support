@@ -1,58 +1,19 @@
-import { useState } from "react"
+
+import { useEffect, useState } from "react"
 import Stats from "../components/Stats"
 import TicketCard from "../components/TicketCard"
 import TicketForm from "../components/TicketForm"
 
+const API_URL = "http://127.0.0.1:5000/api/tickets"
+
 function TicketSystem() {
-
-  const [tickets, setTickets] = useState([
-    {
-      id: 1,
-      title: "Wi-Fi connection problem",
-      category: "Network",
-      priority: "Medium",
-      status: "Open",
-      troubleshooting: [
-        { text: "Checked Wi-Fi connection", completed: true },
-        { text: "Restarted computer", completed: true },
-        { text: "Ran ipconfig", completed: false },
-        { text: "Restarted network adapter", completed: false },
-      ],
-    },
-
-    {
-      id: 2,
-      title: "Microsoft 365 login issue",
-      category: "Software",
-      priority: "High",
-      status: "In Progress",
-      troubleshooting: [
-        { text: "Verified username", completed: true },
-        { text: "Checked internet connection", completed: true },
-        { text: "Reset password", completed: false },
-        { text: "Verified Microsoft 365 account", completed: false },
-      ],
-    },
-
-    {
-      id: 3,
-      title: "Computer running slowly",
-      category: "Performance",
-      priority: "Low",
-      status: "Resolved",
-      troubleshooting: [
-        { text: "Checked Task Manager", completed: true },
-        { text: "Removed unnecessary startup apps", completed: true },
-        { text: "Cleared temporary files", completed: true },
-        { text: "Restarted computer", completed: true },
-      ],
-    },
-  ])
-
+  const [tickets, setTickets] = useState([])
   const [showForm, setShowForm] = useState(false)
-
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("All")
+
+  const [message, setMessage] = useState("")
+  const [errorMessage, setErrorMessage] = useState("")
 
   const [newTicket, setNewTicket] = useState({
     user: "",
@@ -62,119 +23,313 @@ function TicketSystem() {
     description: "",
   })
 
+  function showSuccess(messageText) {
+    setMessage(messageText)
+    setErrorMessage("")
 
-  function handleSubmit(event) {
+    setTimeout(() => {
+      setMessage("")
+    }, 3000)
+  }
 
-    event.preventDefault()
+  function showError(errorText) {
+    setErrorMessage(errorText)
+    setMessage("")
 
-    const ticket = {
-      id: tickets.length + 1,
-      title: newTicket.title,
-      category: newTicket.category,
-      priority: newTicket.priority,
-      status: "Open",
-      troubleshooting: [
-        {
-          text: "Review reported issue",
-          completed: false,
-        },
-        {
-          text: "Check system configuration",
-          completed: false,
-        },
-        {
-          text: "Perform troubleshooting tests",
-          completed: false,
-        },
-        {
-          text: "Verify resolution",
-          completed: false,
-        },
-      ],
+    setTimeout(() => {
+      setErrorMessage("")
+    }, 4000)
+  }
+
+  useEffect(() => {
+    async function loadTickets() {
+      try {
+        const response = await fetch(API_URL)
+
+        if (!response.ok) {
+          throw new Error("Failed to load tickets")
+        }
+
+        const data = await response.json()
+
+        const ticketsWithTroubleshooting = data.map((ticket) => ({
+          ...ticket,
+          troubleshooting:
+            ticket.troubleshooting?.length > 0
+              ? ticket.troubleshooting
+              : [
+                  {
+                    text: "Review reported issue",
+                    completed: false,
+                  },
+                  {
+                    text: "Check system configuration",
+                    completed: false,
+                  },
+                  {
+                    text: "Perform troubleshooting tests",
+                    completed: false,
+                  },
+                  {
+                    text: "Verify resolution",
+                    completed: false,
+                  },
+                ],
+        }))
+
+        setTickets(ticketsWithTroubleshooting)
+      } catch (error) {
+        console.error("Error loading tickets:", error)
+        showError("Unable to load tickets from the server.")
+      }
     }
 
-    setTickets([
-      ...tickets,
-      ticket,
-    ])
+    loadTickets()
+  }, [])
 
-    setNewTicket({
-      user: "",
-      title: "",
-      category: "Network",
-      priority: "Medium",
-      description: "",
-    })
+  async function handleSubmit(event) {
+    event.preventDefault()
 
-    setShowForm(false)
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user: newTicket.user,
+          title: newTicket.title,
+          category: newTicket.category,
+          priority: newTicket.priority,
+          status: "Open",
+          description: newTicket.description,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to create ticket")
+      }
+
+      const createdTicket = await response.json()
+
+      setTickets((currentTickets) => [
+        ...currentTickets,
+        createdTicket,
+      ])
+
+      setNewTicket({
+        user: "",
+        title: "",
+        category: "Network",
+        priority: "Medium",
+        description: "",
+      })
+
+      setShowForm(false)
+
+      showSuccess("Ticket created successfully.")
+    } catch (error) {
+      console.error("Error creating ticket:", error)
+      showError("Unable to create the ticket.")
+    }
   }
 
-
-  function handleStatusChange(ticketId, newStatus) {
-
-    setTickets(
-      tickets.map((ticket) => {
-
-        if (ticket.id !== ticketId) {
-          return ticket
-        }
-
-        return {
-          ...ticket,
+  async function handleStatusChange(ticketId, newStatus) {
+    try {
+      const response = await fetch(`${API_URL}/${ticketId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           status: newStatus,
-
-          troubleshooting:
-            newStatus === "Resolved"
-              ? ticket.troubleshooting.map((step) => ({
-                  ...step,
-                  completed: true,
-                }))
-              : ticket.troubleshooting,
-        }
+        }),
       })
-    )
-  }
 
+      if (!response.ok) {
+        throw new Error("Failed to update ticket")
+      }
 
-  function handleTroubleshootingToggle(ticketId, stepIndex) {
+      const updatedTicket = await response.json()
 
-    setTickets(
-      tickets.map((ticket) => {
-
-        if (ticket.id !== ticketId) {
-          return ticket
-        }
-
-        const updatedSteps = ticket.troubleshooting.map(
-          (step, index) =>
-            index === stepIndex
-              ? {
-                  ...step,
-                  completed: !step.completed,
-                }
-              : step
+      setTickets((currentTickets) =>
+        currentTickets.map((ticket) =>
+          ticket.id === ticketId
+            ? {
+                ...ticket,
+                ...updatedTicket,
+                troubleshooting:
+                  newStatus === "Resolved"
+                    ? ticket.troubleshooting.map((step) => ({
+                        ...step,
+                        completed: true,
+                      }))
+                    : ticket.troubleshooting,
+              }
+            : ticket
         )
+      )
 
-        return {
-          ...ticket,
-          troubleshooting: updatedSteps,
-        }
-
-      })
-    )
+      showSuccess("Ticket status updated successfully.")
+    } catch (error) {
+      console.error("Error updating ticket:", error)
+      showError("Unable to update the ticket status.")
+    }
   }
 
-  function handleDeleteTicket(ticketId) {
+  async function saveTroubleshooting(ticketId, steps) {
+    const response = await fetch(
+      `${API_URL}/${ticketId}/troubleshooting`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          troubleshooting: steps,
+        }),
+      }
+    )
 
-  setTickets(
-    tickets.filter((ticket) => ticket.id !== ticketId)
-  )
+    if (!response.ok) {
+      throw new Error("Failed to save troubleshooting")
+    }
 
-}
+    return response.json()
+  }
 
+  async function handleTroubleshootingToggle(
+    ticketId,
+    stepIndex
+  ) {
+    const ticket = tickets.find(
+      (currentTicket) => currentTicket.id === ticketId
+    )
+
+    if (!ticket) {
+      return
+    }
+
+    const currentSteps = ticket.troubleshooting || []
+
+    const updatedSteps = currentSteps.map((step, index) => ({
+      ...step,
+      completed:
+        index === stepIndex
+          ? !step.completed
+          : step.completed,
+    }))
+
+    setTickets((currentTickets) =>
+      currentTickets.map((currentTicket) =>
+        currentTicket.id === ticketId
+          ? {
+              ...currentTicket,
+              troubleshooting: updatedSteps,
+            }
+          : currentTicket
+      )
+    )
+
+    try {
+      await saveTroubleshooting(ticketId, updatedSteps)
+    } catch (error) {
+      console.error(
+        "Error saving troubleshooting:",
+        error
+      )
+
+      setTickets((currentTickets) =>
+        currentTickets.map((currentTicket) =>
+          currentTicket.id === ticketId
+            ? {
+                ...currentTicket,
+                troubleshooting: currentSteps,
+              }
+            : currentTicket
+        )
+      )
+
+      showError("Unable to save troubleshooting changes.")
+    }
+  }
+
+  async function handleMarkAll(ticketId) {
+    const ticket = tickets.find(
+      (currentTicket) => currentTicket.id === ticketId
+    )
+
+    if (!ticket) {
+      return
+    }
+
+    const updatedSteps = (
+      ticket.troubleshooting || []
+    ).map((step) => ({
+      ...step,
+      completed: true,
+    }))
+
+    setTickets((currentTickets) =>
+      currentTickets.map((currentTicket) =>
+        currentTicket.id === ticketId
+          ? {
+              ...currentTicket,
+              troubleshooting: updatedSteps,
+            }
+          : currentTicket
+      )
+    )
+
+    try {
+      await saveTroubleshooting(ticketId, updatedSteps)
+
+      showSuccess("All troubleshooting steps completed.")
+    } catch (error) {
+      console.error(
+        "Error marking troubleshooting as completed:",
+        error
+      )
+
+      setTickets((currentTickets) =>
+        currentTickets.map((currentTicket) =>
+          currentTicket.id === ticketId
+            ? {
+                ...currentTicket,
+                troubleshooting: ticket.troubleshooting,
+              }
+            : currentTicket
+        )
+      )
+
+      showError("Unable to save troubleshooting changes.")
+    }
+  }
+
+  async function handleDeleteTicket(ticketId) {
+    try {
+      const response = await fetch(`${API_URL}/${ticketId}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete ticket")
+      }
+
+      setTickets((currentTickets) =>
+        currentTickets.filter(
+          (ticket) => ticket.id !== ticketId
+        )
+      )
+
+      showSuccess("Ticket deleted successfully.")
+    } catch (error) {
+      console.error("Error deleting ticket:", error)
+      showError("Unable to delete the ticket.")
+    }
+  }
 
   const filteredTickets = tickets.filter((ticket) => {
-
     const search = searchTerm.toLowerCase()
 
     const matchesSearch =
@@ -189,9 +344,7 @@ function TicketSystem() {
     return matchesSearch && matchesStatus
   })
 
-
   return (
-
     <div className="ticket-system">
 
       <a href="/" className="back-link">
@@ -204,24 +357,30 @@ function TicketSystem() {
         Manage and track technical support requests.
       </p>
 
+      {message && (
+        <div className="success-message">
+          ✓ {message}
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="error-message">
+          ⚠ {errorMessage}
+        </div>
+      )}
 
       <Stats tickets={tickets} />
 
-
       <div className="ticket-header">
-
-        <h2>
-          Support Tickets
-        </h2>
+        <h2>Support Tickets</h2>
 
         <button
+          type="button"
           onClick={() => setShowForm(!showForm)}
         >
           + New Ticket
         </button>
-
       </div>
-
 
       <div className="ticket-filters">
 
@@ -248,43 +407,36 @@ function TicketSystem() {
 
       </div>
 
-
-      {showForm && (
-
-        <TicketForm
-          newTicket={newTicket}
-          setNewTicket={setNewTicket}
-          onSubmit={handleSubmit}
-        />
-
-      )}
-
+   {showForm && (
+  <TicketForm
+    newTicket={newTicket}
+    setNewTicket={setNewTicket}
+    onSubmit={handleSubmit}
+    onCancel={() => setShowForm(false)}
+  />
+)}
 
       <div className="tickets-list">
 
-  {filteredTickets.map((ticket) => (
+        {filteredTickets.map((ticket) => (
+          <TicketCard
+            key={ticket.id}
+            ticket={ticket}
+            onStatusChange={handleStatusChange}
+            onTroubleshootingToggle={
+              handleTroubleshootingToggle
+            }
+            onMarkAll={handleMarkAll}
+            onDelete={handleDeleteTicket}
+          />
+        ))}
 
-    <TicketCard
-      key={ticket.id}
-      ticket={ticket}
-      onStatusChange={handleStatusChange}
-      onTroubleshootingToggle={
-        handleTroubleshootingToggle
-      }
-      onDelete={handleDeleteTicket}
-    />
-
-  ))}
-
-</div>
-
+      </div>
 
       {filteredTickets.length === 0 && (
-
         <p className="no-results">
           No tickets found.
         </p>
-
       )}
 
     </div>
@@ -292,3 +444,4 @@ function TicketSystem() {
 }
 
 export default TicketSystem
+

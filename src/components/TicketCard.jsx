@@ -1,73 +1,141 @@
+
 function TicketCard({
   ticket,
   onStatusChange,
   onTroubleshootingToggle,
+  onMarkAll,
   onDelete,
 }) {
-
   function handleNextStatus() {
-
     if (ticket.status === "Open") {
       onStatusChange(ticket.id, "In Progress")
     } else if (ticket.status === "In Progress") {
       onStatusChange(ticket.id, "Resolved")
     }
+  }
 
+  function formatDate(date) {
+    if (!date) {
+      return "N/A"
+    }
+
+    return new Date(date).toLocaleString()
   }
 
   return (
     <div className="ticket-card">
 
-      <span>
+      <div className="ticket-number">
         #{String(ticket.id).padStart(3, "0")}
-      </span>
+      </div>
 
-      <h3>
-        {ticket.title}
-      </h3>
+      <h3>{ticket.title}</h3>
 
-      <p>
-        {ticket.category}
-      </p>
+      <div className="ticket-details">
 
-      <p className={`priority priority-${ticket.priority.toLowerCase()}`}>
-        Priority: {ticket.priority}
-      </p>
+        <p>
+          <strong>User:</strong>{" "}
+          {ticket.user_name || "N/A"}
+        </p>
 
-      <strong>
-        Status: {ticket.status}
-      </strong>
+        <p>
+          <strong>Category:</strong>{" "}
+          {ticket.category}
+        </p>
+
+        <p
+          className={`priority priority-${ticket.priority.toLowerCase()}`}
+        >
+          <strong>Priority:</strong>{" "}
+          {ticket.priority}
+        </p>
+
+        <p>
+          <strong>Status:</strong>{" "}
+          {ticket.status}
+        </p>
+
+        <p>
+          <strong>Created:</strong>{" "}
+          {formatDate(ticket.created_at)}
+        </p>
+
+      </div>
+
+      {ticket.description && (
+        <div className="ticket-description">
+
+          <h4>Description</h4>
+
+          <p>
+            {ticket.description}
+          </p>
+
+        </div>
+      )}
 
       <div className="troubleshooting">
 
-        <h4>Troubleshooting Steps</h4>
+        <div className="troubleshooting-header">
 
-        {ticket.troubleshooting?.map((step, index) => (
+          <h4>
+            Troubleshooting Steps
+          </h4>
 
-          <label key={index} className="troubleshooting-step">
+          <button
+            type="button"
+            onClick={() => onMarkAll(ticket.id)}
+            disabled={ticket.status === "Open"}
+          >
+            Mark all completed
+          </button>
 
-            <input
-              type="checkbox"
-              checked={step.completed}
-              onChange={() =>
-                onTroubleshootingToggle(ticket.id, index)
-              }
-            />
+        </div>
 
-            <span className={step.completed ? "completed" : ""}>
-              {step.text}
-            </span>
+        {ticket.troubleshooting?.map(
+          (step, index) => (
 
-          </label>
+            <label
+              key={index}
+              className="troubleshooting-step"
+            >
 
-        ))}
+              <input
+                type="checkbox"
+                checked={Boolean(step.completed)}
+                disabled={ticket.status === "Open"}
+                onChange={() =>
+                  onTroubleshootingToggle(
+                    ticket.id,
+                    index
+                  )
+                }
+              />
+
+              <span
+                className={
+                  step.completed
+                    ? "completed"
+                    : ""
+                }
+              >
+                {step.text}
+              </span>
+
+            </label>
+
+          )
+        )}
 
       </div>
 
       <div className="ticket-actions">
 
         {ticket.status !== "Resolved" && (
-          <button onClick={handleNextStatus}>
+          <button
+            type="button"
+            onClick={handleNextStatus}
+          >
             {ticket.status === "Open"
               ? "Start Working"
               : "Mark as Resolved"}
@@ -75,15 +143,19 @@ function TicketCard({
         )}
 
         <button
+          type="button"
           className="delete-button"
           onClick={() => {
-            const confirmed = window.confirm(
-              "Are you sure you want to delete this ticket?"
-            )
+
+            const confirmed =
+              window.confirm(
+                "Are you sure you want to delete this ticket?"
+              )
 
             if (confirmed) {
               onDelete(ticket.id)
             }
+
           }}
         >
           Delete
@@ -96,3 +168,4 @@ function TicketCard({
 }
 
 export default TicketCard
+

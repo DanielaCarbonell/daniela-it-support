@@ -1,104 +1,154 @@
-function TicketForm({
-  newTicket,
-  setNewTicket,
-  onSubmit,
-}) {
 
-  function handleChange(event) {
-
-    const { name, value } = event.target
-
-    setNewTicket({
-      ...newTicket,
-      [name]: value,
-    })
-  }
-
+function TicketForm({ newTicket, setNewTicket, onSubmit, onCancel }) {
   return (
+    <div className="ticket-form">
 
-    <form onSubmit={onSubmit}>
+      {/* Header */}
+      <div className="ticket-form-header">
+        <div className="form-label-top">
+          NEW SUPPORT REQUEST
+        </div>
 
-      <h2>Create New Ticket</h2>
+        <h2>Create New Ticket</h2>
 
-      <label>
-        User Name
-      </label>
+        <p className="form-subtitle">
+          Provide the details below to create a new IT support ticket.
+        </p>
+      </div>
 
-      <input
-        type="text"
-        name="user"
-        value={newTicket.user}
-        onChange={handleChange}
-        placeholder="Enter user name"
-        required
-      />
+      {/* Form */}
+      <form onSubmit={onSubmit}>
 
+        <div className="form-grid">
 
-      <label>
-        Issue
-      </label>
+          {/* Ticket Title */}
+          <div className="form-group full-width">
+            <label htmlFor="ticket-title">
+              Ticket Title
+            </label>
 
-      <input
-        type="text"
-        name="title"
-        value={newTicket.title}
-        onChange={handleChange}
-        placeholder="Example: Cannot connect to Wi-Fi"
-        required
-      />
+            <input
+              id="ticket-title"
+              type="text"
+              placeholder="Example: Unable to connect to Wi-Fi"
+              value={newTicket.title}
+              onChange={(e) =>
+                setNewTicket({
+                  ...newTicket,
+                  title: e.target.value,
+                })
+              }
+              required
+            />
+          </div>
 
+          {/* Category */}
+          <div className="form-group">
+            <label htmlFor="ticket-category">
+              Category
+            </label>
 
-      <label>
-        Category
-      </label>
+            <select
+              id="ticket-category"
+              value={newTicket.category}
+              onChange={(e) =>
+                setNewTicket({
+                  ...newTicket,
+                  category: e.target.value,
+                })
+              }
+            >
+              <option value="Network">Network</option>
+              <option value="Software">Software</option>
+              <option value="Hardware">Hardware</option>
+              <option value="Performance">Performance</option>
+              <option value="Account">Account</option>
+            </select>
+          </div>
 
-      <select
-        name="category"
-        value={newTicket.category}
-        onChange={handleChange}
-      >
-        <option>Network</option>
-        <option>Hardware</option>
-        <option>Software</option>
-        <option>Security</option>
-        <option>Account</option>
-      </select>
+          {/* Priority */}
+          <div className="form-group">
+            <label htmlFor="ticket-priority">
+              Priority
+            </label>
 
+            <select
+              id="ticket-priority"
+              value={newTicket.priority}
+              onChange={(e) =>
+                setNewTicket({
+                  ...newTicket,
+                  priority: e.target.value,
+                })
+              }
+            >
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+            </select>
+          </div>
 
-      <label>
-        Priority
-      </label>
+        </div>
 
-      <select
-        name="priority"
-        value={newTicket.priority}
-        onChange={handleChange}
-      >
-        <option>Low</option>
-        <option>Medium</option>
-        <option>High</option>
-      </select>
+        {/* Description */}
+        <div className="form-group full-width">
 
+          <label htmlFor="ticket-description">
+            Description
+          </label>
 
-      <label>
-        Description
-      </label>
+          <textarea
+            id="ticket-description"
+            placeholder="Describe the technical issue, error message, or troubleshooting already attempted..."
+            value={newTicket.description}
+            onChange={(e) =>
+              setNewTicket({
+                ...newTicket,
+                description: e.target.value,
+              })
+            }
+            rows="6"
+            required
+          />
 
-      <textarea
-        name="description"
-        value={newTicket.description}
-        onChange={handleChange}
-        placeholder="Describe the problem..."
-        rows="4"
-      />
+          <small>
+            Include as much information as possible to help troubleshoot the issue.
+          </small>
 
+        </div>
 
-      <button type="submit">
-        Create Ticket
-      </button>
+        {/* Footer */}
+        <div className="ticket-form-footer">
 
-    </form>
-  )
+          <div className="form-status">
+            <span className="status-dot"></span>
+            Ticket will be created as Open
+          </div>
+
+          <div className="form-buttons">
+
+            <button
+              type="button"
+              className="cancel-button"
+              onClick={onCancel}
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+            >
+              Create Ticket
+            </button>
+
+          </div>
+
+        </div>
+
+      </form>
+    </div>
+  );
 }
 
-export default TicketForm
+export default TicketForm;
+
